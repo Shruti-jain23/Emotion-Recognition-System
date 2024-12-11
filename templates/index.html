@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Emotion Recognition</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background: url('/static/back.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white; /* Ensures text is visible on a dark background */
+        }
+        #start-camera {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+        }
+        #start-camera:hover {
+            background-color: #45a049;
+        }
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        }
+        #video-feed {
+            width: 640px;
+            height: 480px;
+            border: 2px solid #ccc;
+            margin: 0 auto;
+            display: block;
+        }
+        #emotion-label {
+            font-size: 24px;
+            color: yellow;
+            margin-top: 20px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <h1>Emotion Recognition System</h1>
+    <video id="video-feed" autoplay></video>
+    <button id="start-camera">Start Camera</button>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <div id="emotion-label"></div>
+
+    <script>
+        document.getElementById('start-camera').addEventListener('click', function() {
+            startCamera();
+        });
+
+        // Initialize camera and start capturing frames
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    // Attach the video stream to the video element
+                    const video = document.getElementById('video-feed');
+                    video.srcObject = stream;
+
+                    // Start emotion recognition
+                    startEmotionRecognition(video);
+                })
+                .catch(function(error) {
+                    console.log('Error accessing camera:', error);
+                    alert('Could not access the camera.');
+                });
+        }
+
+        // Start capturing frames and send them to the server for emotion prediction
+        function startEmotionRecognition(video) {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            setInterval(function() {
+                // Capture a frame from the video and draw it onto the canvas
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Send the frame data for emotion prediction
+                const frameData = canvas.toDataURL('image/jpeg');
+                fetch('/process_frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: frameData })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Display emotion result
+                    document.getElementById('emotion-label').innerText = `Emotion: ${data.emotion}`;
+                })
+                .catch(error => console.error('Error processing frame:', error));
+            }, 100); // Send frame every 100ms
+        }
+    </script>
+</body>
+</html>
